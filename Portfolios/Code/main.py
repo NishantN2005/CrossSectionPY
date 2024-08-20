@@ -2,7 +2,7 @@ import os
 import globals
 import settingsAndTools
 import portfolioFunction
-
+import processCRSP
 if __name__=="__main__":
     # ENTER PROJECT PATH HERE (i.e. this should be the path to your local repo folder & location of SignalDoc.csv)
     pathProject = os.getcwd() + "/"
@@ -31,6 +31,16 @@ if __name__=="__main__":
         exec(open('10_DownloadCRSP.py').read())
     except Exception as e:
         print(f"An error occurred: {e}")
+
+    print('master: 11_ProcessCrsp.py')
+    try:
+        processCRSP.process()
+    except Exception as e: 
+        print(f"An error occured: {e}")
+
+    print('master: 12_SignalExhibits.py')
+    
+    
 
 
 
