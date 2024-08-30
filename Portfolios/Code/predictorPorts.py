@@ -1,48 +1,83 @@
-import pandas as pd
-from fst import read_fst
 import os
-from globals import pathProject, pathPredictors, pathDataPortfolios
+import pandas as pd
+from openpyxl import load_workbook
 
+from globals import pathProject,pathPredictors,pathDataPortfolios
 
-# ENVIRONMENT AND DATA ====
-crspinfo = read_fst(f'{pathProject}/Portfolios/Data/Intermediate/crspminfo.fst')
-crspret = read_fst(f'{pathProject}/Portfolios/Data/Intermediate/crspmret.fst')
+def read_data():
+    # ENVIRONMENT AND DATA ====
+    crspinfo = pd.read_feather(f"{pathProject}/Portfolios/Data/Intermediate/crspminfo.fst")
+    crspret = pd.read_feather(f"{pathProject}/Portfolios/Data/Intermediate/crspmret.fst")
 
+    return crspinfo, crspret
 
-# SELECT SIGNALS AND CHECK FOR CSVS ====
-strategylist0 = alldocumentation[alldocumentation['Cat.Signal'] == 'Predictor']
-strategylist0 = ifquickrun()
+def process(alldocumentation,crspret,crspinfo, ifquickrun, loop_over_strategies,checkport, writestandard, sum_port_month):
+    # SELECT SIGNALS AND CHECK FOR CSVS ====
 
-csvlist = pd.DataFrame({'signalname': [f[:-4] for f in os.listdir(pathPredictors)], 'in_csv': 1})
+    strategylist0 = alldocumentation[alldocumentation['Cat.Signal'] == "Predictor"]
+    strategylist0 = ifquickrun()
 
-missing = pd.merge(strategylist0[['signalname']], csvlist, on='signalname', how='left')
-missing = missing[missing['in_csv'].isna()]
+    csv_files = os.listdir(pathPredictors)
+    csvlist = pd.DataFrame({
+        'signalname': [filename[:-4] for filename in csv_files],
+        'in_csv': 1
+    })
 
-# BASE PORTS ====
-port = loop_over_strategies(strategylist0)
+    missing = pd.merge(strategylist0[['signalname']], csvlist, on='signalname', how='left')
+    missing = missing[missing['in_csv'].isna()]
 
-# feedback
-checkport(port)
+    if missing.shape[0] > 0:
+        print('Warning: the following predictor signal CSVs are missing:')
+        print(missing['signalname'].tolist())
 
-## EXPORT
-port.to_csv(f'{pathDataPortfolios}/PredictorPortsFull.csv', index=False)
+        temp = input('Press Enter to continue, type "quit" to quit: ')
+        if temp == 'quit':
+            print('Erroring out')
+            raise SystemExit()
 
-sumbase = sumportmonth(port, groupme=['signalname', 'port', 'samptype'], Nstocksmin=1)
-sumbase = pd.merge(sumbase, alldocumentation, on='signalname', how='left')
+    # BASE PORTS ====
+    port = loop_over_strategies(strategylist0,crspret,crspinfo)
 
+    # Feedback
+    checkport(port)
 
-with pd.ExcelWriter(f'{pathDataPortfolios}/PredictorSummary.xlsx') as writer:
-    sumshort.to_excel(writer, sheet_name='short', index=False)
-    sumbase.to_excel(writer, sheet_name='full', index=False)
+    # EXPORT
+    writestandard(port, pathDataPortfolios, "PredictorPortsFull.csv")
 
-print("The following ports are computed successfully")
-print(sumbase[(sumbase['port'] == 'LS') & (sumbase['samptype'] == 'insamp')].sort_values(by='tstat'))
+    # OUTPUT WIDE
+    portlswide = port[port['port'] == "LS"]
+    portlswide = portlswide.pivot(index='date', columns='signalname', values='ret').reset_index()
+    portlswide = portlswide.sort_values(by='date')
 
-print("The following ports failed to compute")
-print(sumbase[sumbase['port'].isna()].sort_values(by='tstat')[['signalname', 'port']])
+    writestandard(portlswide, pathDataPortfolios, "PredictorLSretWide.csv")
 
-if sumbase[sumbase['port'].isna()].shape[0] == 0:
-    print('20_PredictorPorts.py: all portfolios successfully computed')
+    # SUMMARY STATS BY SIGNAL ====
 
+    # Reread in case you want to edit the summary later
+    port = pd.read_csv(f"{pathDataPortfolios}/PredictorPortsFull.csv")
 
+    sumbase = sum_port_month(
+        port,
+        groupme=['signalname', 'port', 'samptype'],
+        Nstocksmin=1
+    ).merge(alldocumentation, on='signalname', how='left')
 
+    sumshort = sumbase[(sumbase['samptype'] == "insamp") & (sumbase['port'] == "LS")]
+    sumshort = sumshort.sort_values(by='signalname').drop(columns=['signallag'])
+
+    # Export summary stats
+    with pd.ExcelWriter(f"{pathDataPortfolios}/PredictorSummary.xlsx", engine='openpyxl') as writer:
+        sumshort.to_excel(writer, sheet_name='short', index=False)
+        sumbase.to_excel(writer, sheet_name='full', index=False)
+
+    # FEEDBACK ON ERRORS ====
+
+    print("The following ports are computed successfully")
+    print(sumbase[(sumbase['port'] == "LS") & (sumbase['samptype'] == "insamp")].sort_values(by='tstat'))
+
+    print("The following ports failed to compute")
+    failed_ports = sumbase[sumbase['port'].isna()].sort_values(by='tstat')
+    print(failed_ports[['signalname', 'port']])
+
+    if failed_ports.shape[0] == 0:
+        print('All portfolios successfully computed')

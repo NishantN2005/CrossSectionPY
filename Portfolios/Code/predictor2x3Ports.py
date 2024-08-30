@@ -2,29 +2,37 @@ from fst import read_fst
 import pandas as pd
 import numpy as np
 
+import portfolioFunction
 
 from globals import pathProject, pathDataPortfolios
 
-# ENVIRONMENT AND DATA ====
-crspinfo = read_fst(f"{pathProject}Portfolios/Data/Intermediate/crspminfo.fst").to_pandas()
-crspret = read_fst(f"{pathProject}'Portfolios/Data/Intermediate/crspmret.fst").to_pandas()
+def read_data():
+    # ENVIRONMENT AND DATA ====
+    crspinfo = read_fst(f"{pathProject}Portfolios/Data/Intermediate/crspminfo.fst").to_pandas()
+    crspret = read_fst(f"{pathProject}'Portfolios/Data/Intermediate/crspmret.fst").to_pandas()
 
-# SELECT SIGNALS 
-strategylist0 = alldocumentation[
-    (alldocumentation['Cat.Signal'] == "Predictor") &
-    (alldocumentation['Cat.Form'] == 'continuous')
-]
-strategylist = ifquickrun()
+    return crspinfo, crspret
+
+def select_signals(alldocumentation, ifquickrun):
+    # SELECT SIGNALS 
+    strategylist0 = alldocumentation[
+        (alldocumentation['Cat.Signal'] == "Predictor") &
+        (alldocumentation['Cat.Form'] == 'continuous')
+    ]
+    strategylist = ifquickrun(strategylist0)
+
+    return strategylist
+
 
 # FUNCTION FOR CONVERTING SIGNALNAME TO 2X3 PORTS ====
 # analogous to signalname_to_ports in portfolioFunction.py
 
-def signalname_to_2x3(signalname):
+def signalname_to_2x3(signalname, strategylist, crspret, crspinfo):
     # Import signal and sign
-    sign_value = strategylist['Sign'].iloc[s]
+    sign_value = strategylist['Sign'].iloc['s']
 
     # Assuming import_signal is a defined function in Python
-    signal = import_signal(signalname, None, sign_value)
+    signal = portfolioFunction.import_signal(signalname, None, sign_value,crspinfo)
 
     # ASSIGN TO 2X3 PORTFOLIOS 
     # Keep value of signal corresponding to June.
@@ -155,39 +163,44 @@ def signalname_to_2x3(signalname):
 
     # Sort the DataFrame by 'port' and 'date'
     port = port.sort_values(by=['port', 'date']).reset_index(drop=True)
+    return port
 
-# LOOP OVER SIGNALS ====
-num_signals = len(strategylist)
-allport=[]
+def loop_over_signals(strategylist, crspret, crspinfo):
+    # LOOP OVER SIGNALS ====
+    num_signals = len(strategylist)
+    allport=[]
 
-for s in range(num_signals):
-    signalname = strategylist['signalname'].iloc[s]
+    for s in range(num_signals):
+        signalname = strategylist['signalname'].iloc[s]
 
-    print(f"Processing Signal No. {s} ===> {signalname}")
+        print(f"Processing Signal No. {s} ===> {signalname}")
 
-    try:
-        tempport = signalname_to_2x3(
-            signalname=strategylist['signalname'].iloc[s]
-        )
-    except:
-        print("Error in signalname_to_2x3, returning df with NA")
+        try:
+            tempport = signalname_to_2x3(
+                strategylist['signalname'].iloc[s],
+                strategylist,
+                crspret,
+                crspinfo
+            )
+        except:
+            print("Error in signalname_to_2x3, returning df with NA")
 
-        # Assuming allport[s-1] exists and has been defined before
-        ncols = allport[s-1].shape[1] if len(allport) > 0 and s > 0 else 0
-        tempport = pd.DataFrame(np.nan, index=[0], columns=range(ncols))
-    
-    # add column names if signalname_to_2x3 failed
-    if pd.isna(tempport.iloc[0, 0]):
-        # Set column names to match those of the first element in allport
-        tempport.columns = allport[0].columns
+            # Assuming allport[s-1] exists and has been defined before
+            ncols = allport[s-1].shape[1] if len(allport) > 0 and s > 0 else 0
+            tempport = pd.DataFrame(np.nan, index=[0], columns=range(ncols))
         
-        # Set the signalname to the one from the first strategy
-        tempport['signalname'] = strategylist['signalname'].iloc[0]
-    allport[s] = tempport
+        # add column names if signalname_to_2x3 failed
+        if pd.isna(tempport.iloc[0, 0]):
+            # Set column names to match those of the first element in allport
+            tempport.columns = allport[0].columns
+            
+            # Set the signalname to the one from the first strategy
+            tempport['signalname'] = strategylist['signalname'].iloc[0]
+        allport[s] = tempport
 
-    port = pd.concat(allport, ignore_index=True)
+        port = pd.concat(allport, ignore_index=True)
 
-    # WRITE TO DISK  ====
-    output_path = f"{pathDataPortfolios}/PredictorAltPorts_FF93style.csv"
-    port.to_csv(output_path, index=False)
+        # WRITE TO DISK  ====
+        output_path = f"{pathDataPortfolios}/PredictorAltPorts_FF93style.csv"
+        port.to_csv(output_path, index=False)
 

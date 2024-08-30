@@ -5,7 +5,7 @@ import numpy as np
 
 #### FUNCTION FOR TURNING SIGNAL CSV TO K PORTFOLIOS
 
-def import_signal(signal_name, filterstr, sign):
+def import_signal(signal_name, filterstr, sign, crspinfo):
     """
     Load signal data from a CSV file, apply filters, and adjust signal values.
 
@@ -51,7 +51,7 @@ def import_signal(signal_name, filterstr, sign):
 
     return signal
 
-def signal_name_to_port(signal_name, cat_form='continuous', q_cut=0.2, sweight='EW', long_port_name='max',
+def signalname_to_ports(signal_name, crspret,crspinfo, cat_form='continuous', q_cut=0.2, sweight='EW', long_port_name='max',
                         short_port_name='min', start_month=6, port_period=1, q_filt=None, filterstr=None, 
                         passive_gain=False):
     """
@@ -99,7 +99,7 @@ def signal_name_to_port(signal_name, cat_form='continuous', q_cut=0.2, sweight='
         # subset to firms used for breakpoints, right now only exclude based on q_filt
 
         #------honestly have no idea how signal is defined here--------------
-        tempbreak=signal
+        tempbreak=import_signal(signal_name,filterstr,crspinfo)
         if q_filt is not None and q_filt=='NYSE':
             tempbreak = tempbreak[tempbreak['exchcd'] == 1]
 
@@ -111,5 +111,5 @@ def signal_name_to_port(signal_name, cat_form='continuous', q_cut=0.2, sweight='
             plist = list(np.unique([q_cut, 1 - q_cut]))
 
         # find breakpoints 
-        
+
 

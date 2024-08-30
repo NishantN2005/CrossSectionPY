@@ -252,31 +252,29 @@ def process():
             'rho': rhos,
             'series': vv
             })], ignore_index=True)
-    # Assuming allRhos is a pandas DataFrame
+    # Plot all correlations on the same axis with faceting by 'series'
+    plt.figure(figsize=(10, 8))
+    g = sns.FacetGrid(allRhos, col="series", col_wrap=3, sharey=False, height=4)
+    g.map(sns.histplot, "rho", bins=25)
+    g.set(xlim=(-1, 1))
 
-# Plot all correlations on the same axis with faceting by 'series'
-plt.figure(figsize=(10, 8))
-g = sns.FacetGrid(allRhos, col="series", col_wrap=3, sharey=False, height=4)
-g.map(sns.histplot, "rho", bins=25)
-g.set(xlim=(-1, 1))
+    # Add labels
+    g.set_axis_labels("Correlation coefficient", "Count")
 
-# Add labels
-g.set_axis_labels("Correlation coefficient", "Count")
+    # Apply a minimal theme
+    sns.set_theme(style="whitegrid")
 
-# Apply a minimal theme
-sns.set_theme(style="whitegrid")
+    # Save the plot as a PDF file
+    plt.savefig(os.path.join(pathResults, 'fig1Stock_jointly.pdf'), format='pdf', bbox_inches='tight')
 
-# Save the plot as a PDF file
-plt.savefig(os.path.join(pathResults, 'fig1Stock_jointly.pdf'), format='pdf', bbox_inches='tight')
+    # Optionally, close the plot if you're done with it
+    plt.close()
 
-# Optionally, close the plot if you're done with it
-plt.close()
+    # Save the DataFrame as a binary file
+    with open(os.path.join(pathResults, 'rhoStockLevel.pkl'), 'wb') as file:
+        pickle.dump(allRhos, file)
 
-# Save the DataFrame as a binary file
-with open(os.path.join(pathResults, 'rhoStockLevel.pkl'), 'wb') as file:
-    pickle.dump(allRhos, file)
 
-    
         
 
     

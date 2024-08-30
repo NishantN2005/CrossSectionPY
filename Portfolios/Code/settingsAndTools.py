@@ -5,6 +5,7 @@ import re
 import warnings
 import time
 import csv
+import portfolioFunction
 #paths
 from globals import pathProject, pathResults,pathDataPortfolios, pathDataIntermediate, pathPredictors, pathPlacebos, pathtemp
 
@@ -161,7 +162,7 @@ def sum_port_month(portret, alldocumentation, groupme = ['signalname', 'samptype
     return tempsum
 
 ### CHECK PORTFOLIOS ###
-def check_port(port, groupme = ['signalname', 'port']):
+def check_port(port):
     summary_df = sum_port_month(port, read_documentation(), Nstocksmin=1)
 
     # Filter for 'insamp' samptype and print
@@ -201,11 +202,13 @@ def if_quick_run(strategy_list):
 
 #############################################################################
 
-def loop_over_strategies(strategy_list, 
+def loop_over_strategies(strategy_list,
+                         crspret,
+                         crspinfo, 
                             saveportcsv=False,
                             saveportpath = np.nan,
                             saveportNmin = 1,
-                            passive_gain = False 
+                            passive_gain = False ,
                             ):
     Nstrat = len(strategy_list) #number of rows
 
@@ -221,8 +224,10 @@ def loop_over_strategies(strategy_list,
         start_time = time.time()
 
         try:
-            tempport = signalname_to_ports(
+            tempport = portfolioFunction.signalname_to_ports(
             signalname=strategy_list.iloc[i]['signalname'],
+            crspret=crspret,
+            crspinfo=crspinfo,
             Cat_Form=strategy_list.iloc[i]['Cat.Form'],
             q_cut=strategy_list.iloc[i]['q_cut'],
             sweight=strategy_list.iloc[i]['sweight'],
