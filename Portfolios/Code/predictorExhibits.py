@@ -11,8 +11,6 @@ from matplotlib.lines import Line2D
 import matplotlib.transforms as transforms
 import matplotlib.patheffects as path_effects
 
-import math
-from adjustText import adjust_text
 import statsmodels.api as sm
 from tabulate import tabulate
 
@@ -399,7 +397,6 @@ def scatter_fig(docnew):
     sns.despine()
     plt.grid(True, which="both", ls="--")
     texts = [plt.text(x, y, label) for x, y, label in zip(df_plot['tstatOP'], df_plot['tstatRep'], df_plot['signalname'])]
-    adjust_text(texts, arrowprops=dict(arrowstyle="-", color='k', lw=0.5))
 
     temp = 1.5
     plt.savefig(f"{pathResults}/fig_tstathand_vs_tstatOP.pdf", 
@@ -460,7 +457,6 @@ def scatter_fig(docnew):
             df_plot.signalname.iloc[line],
             fontsize=8
         ))
-    adjust_text(texts, arrowprops=dict(arrowstyle="->", color='r', lw=0.5))
 
     legend_elements = [
         Line2D([0], [0], color='#e41a1c', lw=4, label='Highlighted Signals'),

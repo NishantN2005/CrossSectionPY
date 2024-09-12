@@ -6,8 +6,8 @@ from globals import pathProject,pathPredictors,pathDataPortfolios
 
 def read_data():
     # ENVIRONMENT AND DATA ====
-    crspinfo = pd.read_feather(f"{pathProject}/Portfolios/Data/Intermediate/crspminfo.fst")
-    crspret = pd.read_feather(f"{pathProject}/Portfolios/Data/Intermediate/crspmret.fst")
+    crspinfo = pd.read_csv(f"{pathProject}/Portfolios/Data/Intermediate/crspminfo.csv")
+    crspret = pd.read_csv(f"{pathProject}/Portfolios/Data/Intermediate/crspmret.csv")
 
     return crspinfo, crspret
 
@@ -15,7 +15,7 @@ def process(alldocumentation,crspret,crspinfo, ifquickrun, loop_over_strategies,
     # SELECT SIGNALS AND CHECK FOR CSVS ====
 
     strategylist0 = alldocumentation[alldocumentation['Cat.Signal'] == "Predictor"]
-    strategylist0 = ifquickrun()
+    strategylist0 = ifquickrun(strategylist0)
 
     csv_files = os.listdir(pathPredictors)
     csvlist = pd.DataFrame({
@@ -58,6 +58,7 @@ def process(alldocumentation,crspret,crspinfo, ifquickrun, loop_over_strategies,
 
     sumbase = sum_port_month(
         port,
+        alldocumentation,
         groupme=['signalname', 'port', 'samptype'],
         Nstocksmin=1
     ).merge(alldocumentation, on='signalname', how='left')

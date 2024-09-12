@@ -2,14 +2,13 @@ from globals import pathDataIntermediate, pathPredictors
 
 import os
 import pandas as pd
-from fst import read_fst
 import numpy as np
 
 def read_data():
     ### READ DATA
 
-    crspret = read_fst(os.path.join(pathDataIntermediate, 'crspmret.fst'))
-    crspinfo = read_fst(os.path.join(pathDataIntermediate, 'crspminfo.fst'))
+    crspret = pd.read_csv(os.path.join(pathDataIntermediate, 'crspmret.csv'))
+    crspinfo = pd.read_csv(os.path.join(pathDataIntermediate, 'crspminfo.csv'))
 
     return crspret, crspinfo
 
@@ -19,10 +18,14 @@ def make_STreversal(crspret):
     if not os.path.exists(strev_csv_path):
         temp = crspret[['permno', 'date', 'ret']].copy()
         temp['STreversal'] = temp['ret'].fillna(0)
-        temp['yyyymm'] = temp['date'].dt.year * 100 + temp['date'].dt.month
+        temp['yyyymm'] = pd.to_datetime(temp['date'])
+        temp['yyyymm'] = temp['yyyymm'].dt.strftime('%Y%m')
+
+        print(temp['yyyymm'].head())
         temp = temp.dropna(subset=['STreversal'])
         temp = temp[['permno', 'yyyymm', 'STreversal']]
         
+        print(temp.head())
         temp.to_csv(strev_csv_path, index=False)
 def make_price(crspinfo):
     ### MAKE Price

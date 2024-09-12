@@ -1,10 +1,7 @@
-import time
 from datetime import datetime
 import pandas as pd
 from sqlalchemy import create_engine
 import psycopg2
-import os
-from fst import write_fst
 from globals import pathProject, skipdaily
 
 
@@ -19,8 +16,8 @@ def wrds_login():
 
 def download_data(wrds_user, wrds_password):
     '''Creates connection to database and selects the data from wrds to be retrieved and downloaded.
-    Writes the data to Portfolios/Data/Intermediate/d_crsp_raw.fst'''
-    
+    Writes the data to Portfolios/Data/Intermediate/d_crsp_raw.csv'''
+
     host = 'wrds-pgdata.wharton.upenn.edu'
     port = 9737
     dbname = 'wrds'
@@ -64,7 +61,7 @@ def download_data(wrds_user, wrds_password):
     except Exception as e:
         print(f"An error occurred: {e}")
 
-    write_fst(m_crsp, pathProject+'Portfolios/Data/Intermediate/m_crsp_raw.fst')
+    m_crsp.to_csv(pathProject+'Portfolios/Data/Intermediate/m_crsp_raw.csv')
 
     # CRSP daily --------------------------------------------------------------
     if not skipdaily:
@@ -88,4 +85,4 @@ def download_data(wrds_user, wrds_password):
                 d_crsp = temp_d_crsp
             else:
                 d_crsp= pd.concat([d_crsp, temp_d_crsp], ignore_index=True)
-        write_fst(d_crsp, pathProject+'Portfolios/Data/Intermediate/d_crsp_raw.fst')
+        d_crsp.to_csv(pathProject+'Portfolios/Data/Intermediate/d_crsp_raw.csv')

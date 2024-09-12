@@ -1,4 +1,3 @@
-from fst import read_fst
 import pandas as pd
 import numpy as np
 
@@ -8,8 +7,8 @@ from globals import pathProject, pathDataPortfolios
 
 def read_data():
     # ENVIRONMENT AND DATA ====
-    crspinfo = read_fst(f"{pathProject}Portfolios/Data/Intermediate/crspminfo.fst").to_pandas()
-    crspret = read_fst(f"{pathProject}'Portfolios/Data/Intermediate/crspmret.fst").to_pandas()
+    crspinfo = pd.read_csv(f"{pathProject}Portfolios/Data/Intermediate/crspminfo.csv")
+    crspret = pd.read_csv(f"{pathProject}Portfolios/Data/Intermediate/crspmret.csv")
 
     return crspinfo, crspret
 
@@ -27,12 +26,12 @@ def select_signals(alldocumentation, ifquickrun):
 # FUNCTION FOR CONVERTING SIGNALNAME TO 2X3 PORTS ====
 # analogous to signalname_to_ports in portfolioFunction.py
 
-def signalname_to_2x3(signalname, strategylist, crspret, crspinfo):
+def signalname_to_2x3(signalname, sign_value, crspret, crspinfo):
     # Import signal and sign
-    sign_value = strategylist['Sign'].iloc['s']
+    #sign_value = strategylist['Sign'].iloc['s']
 
     # Assuming import_signal is a defined function in Python
-    signal = portfolioFunction.import_signal(signalname, None, sign_value,crspinfo)
+    signal = portfolioFunction.import_signal(signalname, np.nan, sign_value,crspinfo)
 
     # ASSIGN TO 2X3 PORTFOLIOS 
     # Keep value of signal corresponding to June.
@@ -51,29 +50,30 @@ def signalname_to_2x3(signalname, strategylist, crspret, crspinfo):
         qme_mid=('me', lambda x: x.quantile(0.5))
     ).reset_index()
 
-    filtered_signaljune = signaljune[(signaljune['exchcd'].isin([1, 2, 3])) & 
-                                 (signaljune['shrcd'].isin([10, 11]))]
+    port6 = signaljune[
+        signaljune['exchcd'].isin([1, 2, 3]) & signaljune['shrcd'].isin([10, 11])
+    ]
 
-    # Perform a left join with nysebreaks on the 'yyyymm' column
-    merged_df = filtered_signaljune.merge(nysebreaks, on='yyyymm', how='left')
+    port6 = port6.merge(nysebreaks, on='yyyymm', how='left')
 
-    # Create new columns based on conditions
-    merged_df['q_signal'] = pd.cut(
-        merged_df['signal'], 
-        bins=[-float('inf'), merged_df['qsignal_l'], merged_df['qsignal_h'], float('inf')],
-        labels=['L', 'M', 'H']
-    )
+    conditions_signal = [
+        port6['signal'] <= port6['qsignal_l'],
+        port6['signal'] <= port6['qsignal_h'],
+        port6['signal'] > port6['qsignal_h']
+    ]
+    choices_signal = ['L', 'M', 'H']
+    port6['q_signal'] = np.select(conditions_signal, choices_signal)
 
-    merged_df['q_me'] = pd.cut(
-        merged_df['me'], 
-        bins=[-float('inf'), merged_df['qme_mid'], float('inf')],
-        labels=['S', 'B']
-    )
+    conditions_me = [
+        port6['me'] <= port6['qme_mid'],
+        port6['me'] > port6['qme_mid']
+    ]
+    choices_me = ['S', 'B']
+    port6['q_me'] = np.select(conditions_me, choices_me)
+    port6['port6'] = port6['q_me'] + port6['q_signal']
 
-    merged_df['port6'] = merged_df['q_me'] + merged_df['q_signal']
 
-    # Select the desired columns
-    port6 = merged_df[['permno', 'yyyymm', 'port6', 'signal']]
+    port6 = port6[['permno', 'yyyymm', 'port6', 'signal']]
 
     # FIND MONTHLY FACTOR RETURNS 
     # Find VW returns, signal lag, and number of firms
@@ -178,25 +178,29 @@ def loop_over_signals(strategylist, crspret, crspinfo):
         try:
             tempport = signalname_to_2x3(
                 strategylist['signalname'].iloc[s],
-                strategylist,
+                strategylist['Sign'].iloc[s],
                 crspret,
                 crspinfo
             )
         except:
             print("Error in signalname_to_2x3, returning df with NA")
 
-            # Assuming allport[s-1] exists and has been defined before
+            #Assuming allport[s-1] exists and has been defined before
             ncols = allport[s-1].shape[1] if len(allport) > 0 and s > 0 else 0
             tempport = pd.DataFrame(np.nan, index=[0], columns=range(ncols))
         
         # add column names if signalname_to_2x3 failed
+        print('-------tempport---------')
+        print(tempport.columns)
+        print(len(tempport))
+
         if pd.isna(tempport.iloc[0, 0]):
             # Set column names to match those of the first element in allport
             tempport.columns = allport[0].columns
             
             # Set the signalname to the one from the first strategy
             tempport['signalname'] = strategylist['signalname'].iloc[0]
-        allport[s] = tempport
+        allport.append(tempport)
 
         port = pd.concat(allport, ignore_index=True)
 

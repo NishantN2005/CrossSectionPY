@@ -8,7 +8,6 @@
 # we do not store Nlong and Nshort, and instead impose the screen at the portfolio 
 # level. 
 from datetime import datetime
-from fst import read_fst
 import pandas as pd
 import numpy as np
 import os
@@ -44,11 +43,9 @@ os.makedirs(pathDataDailyQuintileVW, exist_ok=True)
 
 def process(alldocumentation, ifquickrun, loop_over_strategies):
     ### load crsp returns
-    crspinfo = read_fst(os.path.join(pathProject, 'Portfolios/Data/Intermediate/crspminfo.fst')).to_pandas()
-    crspinfo=pd.DataFrame(crspinfo)
+    crspinfo = pd.read_csv(os.path.join(pathProject, 'Portfolios/Data/Intermediate/crspminfo.csv'))
 
-    crspnet = read_fst(os.path.join(pathProject, 'Portfolios/Data/Intermediate/crspdret.fst')).to_pandas()
-    crspnet = pd.DataFrame(crspnet)
+    crspnet = pd.read_csv(os.path.join(pathProject, 'Portfolios/Data/Intermediate/crspdret.csv'))
 
     ### SELECT SIGNALS
     strategylist0 = alldocumentation[alldocumentation['Cat.Signal'] == 'Predictor']

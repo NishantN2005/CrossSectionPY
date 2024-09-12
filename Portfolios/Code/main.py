@@ -1,8 +1,8 @@
 import os
 import settingsAndTools
-import processCRSP
 import time
 import downloadCRSP
+import processCRSP
 import createCRSPPredictors
 import predictorPorts
 import predictorExhibits
@@ -18,7 +18,7 @@ from globals import quickrun, skipdaily
 
 if __name__=="__main__":
     # ENTER PROJECT PATH HERE (i.e. this should be the path to your local repo folder & location of SignalDoc.csv)
-    pathProject = os.getcwd() + "/"
+    pathProject = os.path.join(os.getcwd()+"/")
     
 
     # Check whether project path is set correctly
@@ -32,10 +32,6 @@ if __name__=="__main__":
     settingsAndTools.create_folders()
     alldocumentation = settingsAndTools.read_documentation()
 
-
-    #TODO
-    #source('01_PortfolioFunction.R', echo=T)
-
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
     # PREPARE INTERMEDIATE DATA ####
@@ -46,7 +42,7 @@ if __name__=="__main__":
         start_time = time.time()
 
         wrds_user, wrds_password=downloadCRSP.wrds_login()
-        downloadCRSP.download_data()
+        downloadCRSP.download_data(wrds_user, wrds_password)
 
         end_time=time.time()
         print(f'total time taken for file 10: {end_time-start_time}')
@@ -73,7 +69,7 @@ if __name__=="__main__":
     # ==== CREATE BASELINE PORTFOLIOS ====
     print('main: predictorPorts.py')
     try:
-        crspret, crspinfo = predictorPorts.read_data()
+        crspinfo, crspret = predictorPorts.read_data()
         predictorPorts.process(
             alldocumentation,
             crspret,
@@ -161,10 +157,10 @@ if __name__=="__main__":
     # EXTRA STUFF ####
     # this can be run at the end since it takes a long time and isn't necessary for other results
     print("main: signalExhibits")
-    try:
-        signalExhibits.process()
-    except Exception as e:
-        print(f'An error has occured: {e}')
+    #try:
+    signalExhibits.process()
+    #except Exception as e:
+    #    print(f'An error has occured: {e}')
 
     if not skipdaily:
         print("dailyPredictorPorts")

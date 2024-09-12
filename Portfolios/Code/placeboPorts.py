@@ -1,16 +1,14 @@
-from fst import read_fst
 import pandas as pd
 import os
+from openpyxl import Workbook
 
 from globals import pathProject, pathDataPortfolios
 
 def read_data():
 # ==== ENVIRONMENT AND DATA ====
-    crspret = read_fst(os.path.join(pathProject, 'Portfolios/Data/Intermediate/crspmret.fst')).to_pandas()
-    crspret=pd.DataFrame(crspret)
+    crspret = pd.read_csv(os.path.join(pathProject, 'Portfolios/Data/Intermediate/crspmret.csv'))
 
-    crspinfo = read_fst(os.path.join(pathProject, 'Portfolios/Data/Intermediate/crspminfo.fst'))
-    crspinfo=pd.DataFrame(crspinfo)
+    crspinfo = pd.read_csv(os.path.join(pathProject, 'Portfolios/Data/Intermediate/crspminfo.csv'))
 
     return crspret, crspinfo
 
@@ -18,19 +16,25 @@ def select_signals(alldocumentation, crspret, crspinfo, ifquickrun, loop_over_st
     ######################################################################
     ### SELECT SIGNALS
     ######################################################################
+    print('----alldocumentation----')
+    print(alldocumentation)
     strategylist0 = alldocumentation[alldocumentation['Cat.Signal'] == "Placebo"]
-    strategylist0 = ifquickrun()
+    strategylist0 = ifquickrun(strategylist0)
 
     #####################################################################
     ### COMPUTE PORTFOLIOS
     #####################################################################
     portmonth = loop_over_strategies(strategylist0,crspret,crspinfo)
     ## EXPORT
+    print('------portmonth-----')
+    print(portmonth)
+
     writestandard(portmonth,pathDataPortfolios,"PlaceboPortsFull.csv")
 
     # SUMMARY STATS BY SIGNAL -------------------------------------------------
     sumbase = sumportmonth(
         portmonth,
+        alldocumentation,
         groupme=["signalname", "port", "samptype"],
         Nstocksmin=20
     )
@@ -41,24 +45,24 @@ def select_signals(alldocumentation, crspret, crspinfo, ifquickrun, loop_over_st
 
     ## export
     ls_insamp_only = sumbase[
-        (sumbase['samptype'] == "insamp") & 
-        (sumbase['port'] == "LS")
+    (sumbase['samptype'] == 'insamp') & (sumbase['port'] == 'LS')
     ].sort_values(by='tstat')
 
-    sheets = {
-        'ls_insamp_only': ls_insamp_only,
-        'full': sumbase
-    }
+    # Define the full dataset
+    full = sumbase
 
-    output_path = f"{pathDataPortfolios}/PlaceboSummary.xlsx"
+    # Define the file path
+    file_path = f"{pathDataPortfolios}/PlaceboSummary.xlsx"
 
-    with pd.ExcelWriter(output_path, engine='xlsxwriter') as writer:
-        for sheet_name, data in sheets.items():
-            data.to_excel(writer, sheet_name=sheet_name, index=False)
+    # Export the DataFrames to an Excel file with multiple sheets
+    with pd.ExcelWriter(file_path, engine='openpyxl') as writer:
+        ls_insamp_only.to_excel(writer, sheet_name='ls_insamp_only', index=False)
+        full.to_excel(writer, sheet_name='full', index=False)
 
     # FEEDBACK ON ERRORS -------------------------------------------------
     tempsum = sumportmonth(
         portmonth,
+        alldocumentation,
         groupme=["signalname", "port", "samptype"],
         Nstocksmin=20
     )

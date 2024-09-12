@@ -90,7 +90,12 @@ def check_signals(docs = read_documentation(), path_proj = pathProject):
     # Placebo in Data/Placebo?
     placeboNotInData = []
     for p in prds_placebo:
-        if sum(bool(re.search(p, fls_placebos, re.IGNORECASE)) for fl in fls_placebos):
+        print("-----p-----")
+        print(type(p))
+        print(p)
+        print(type(fls_placebos))
+        print(fls_placebos)
+        if p+'.csv' not in fls_placebos:
             placeboNotInData.append(p)
     
     # Output warnings
@@ -114,7 +119,7 @@ def write_standard(df, path, filename):
                 header=True, 
                 index=False, 
                 doublequote=True, 
-                quoting=pd.io.common.csv.QUOTE_NONE)
+                quoting=csv.QUOTE_NONE)
     
 ### FUNCTION FOR SUMMARIZING PORTMONTH DATASET
 def sum_port_month(portret, alldocumentation, groupme = ['signalname', 'samptype', 'port'], Nstocksmin=20):
@@ -124,6 +129,7 @@ def sum_port_month(portret, alldocumentation, groupme = ['signalname', 'samptype
         on='signalname',
         how='left'
     )
+    temp['date'] = pd.to_datetime(temp['date'])
 
     # Add samptype column using conditions
     temp['samptype'] = np.select(
@@ -196,7 +202,7 @@ def if_quick_run(strategy_list):
         print('running quickly')
         strategy_list = strategy_list[
         strategy_list['signalname'].isin(quickrunlist)
-        ]
+        ]  
 
     return strategy_list
 
@@ -215,25 +221,29 @@ def loop_over_strategies(strategy_list,
     allport=[]
 
     for i in range(Nstrat):
-        print(f'{i}/{Nstrat}:{strategy_list['signalname'][i]}')
+        print(f"{i+1}/{Nstrat}:{strategy_list['signalname'].iloc[i]}")
 
         # Select specific columns for the i-th row and print
-        print(strategy_list.loc[i, ['signalname', 'Cat.Form', 'q_cut', 'sweight', 'portperiod', 'q_filt', 'filterstr']])
+        print(strategy_list.iloc[i,0:7])
 
+        #debugging print segment
+        print('-------filterstr--------')
+        print(strategy_list.iloc[i]['filterstr'])
+        print(strategy_list['filterstr'])
 
         start_time = time.time()
-
+        print(strategy_list.iloc[i]['Sign'])
         try:
             tempport = portfolioFunction.signalname_to_ports(
-            signalname=strategy_list.iloc[i]['signalname'],
+            signal_name=strategy_list.iloc[i]['signalname'],
             crspret=crspret,
             crspinfo=crspinfo,
-            Cat_Form=strategy_list.iloc[i]['Cat.Form'],
+            cat_form=strategy_list.iloc[i]['Cat.Form'],
             q_cut=strategy_list.iloc[i]['q_cut'],
             sweight=strategy_list.iloc[i]['sweight'],
-            Sign=strategy_list.iloc[i]['Sign'],
-            startmonth=strategy_list.iloc[i]['startmonth'],
-            portperiod=strategy_list.iloc[i]['portperiod'],
+            sign=strategy_list.iloc[i]['Sign'],
+            start_month=strategy_list.iloc[i]['startmonth'],
+            port_period=strategy_list.iloc[i]['portperiod'],
             q_filt=strategy_list.iloc[i]['q_filt'],
             filterstr=strategy_list.iloc[i]['filterstr'],
             passive_gain=passive_gain

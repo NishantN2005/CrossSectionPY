@@ -5,7 +5,7 @@ global quickrun
 quickrun = True # use True if you want to run quickly for testing
 
 global quickrunlist 
-quickrunlist = ['Accruals','AM'] # list of signals to use for quickrun
+quickrunlist = ['Accruals','AM', 'AMq'] # list of signals to use for quickrun
 
 global skipdaily
 skipdaily = True # use True to skip daily CRSP which is very slow

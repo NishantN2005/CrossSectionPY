@@ -5,7 +5,6 @@ import os
 from globals import pathProject, pathResults,pathPredictors, pathDataIntermediate
 from settingsAndTools import check_signals
 import itertools
-from fst import write_fst,read_fst
 import multiprocessing
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -16,11 +15,13 @@ import pickle
 def process():
     # first count for each paper
     count_us = read_documentation()
+    print("-------count_us------")
+    print(count_us.columns)
     count_us=(
-           count_us[count_us['Predictability_in_OP']!='9_drop']
-           .assign(bench=lambda x: x['Cat_Signal']=='Predictor')
-           .groupby('Predictability_in_OP')
-           .agg(bench=('bench','sum'), extended=('Cat_Signal', 'size'))
+           count_us[count_us['Predictability in OP']!='9_drop']
+           .assign(bench=lambda x: x['Cat.Signal']=='Predictor')
+           .groupby('Predictability in OP')
+           .agg(bench=('bench','sum'), extended=('Cat.Signal', 'size'))
            .reset_index()
            )
 
@@ -29,21 +30,23 @@ def process():
         pd.read_csv(f"{pathProject}Comparison_to_MetaReplications.csv")
         .query("metastudy == 'MP'")
         .assign(covered=lambda df: df['ourname'] != '_missing_')  # Create new 'covered' column
-        .groupby('Predictability_in_OP')  # Group by 'Predictability_in_OP'
+        .groupby('Predictability.in.OP')  # Group by 'Predictability_in_OP'
         .agg(n=('metastudy', 'size'), covered=('covered', 'sum'))  # Summarize
         .assign(pctcov=lambda df: df['covered'] / df['n'] * 100)  # Calculate percentage coverage
         .reset_index()
         )
-
+    
     count_ghz=(
         pd.read_csv(f"{pathProject}Comparison_to_MetaReplications.csv")
         .query("metastudy == 'GHZ'")  # Filter rows where metastudy is 'GHZ'
         .assign(covered=lambda df: df['ourname'] != '_missing_')  # Create new 'covered' column
-        .groupby('Predictability_in_OP')  # Group by 'Predictability_in_OP'
+        .groupby('Predictability.in.OP')  # Group by 'Predictability_in_OP'
         .agg(n=('metastudy', 'size'), covered=('covered', 'sum'))  # Summarize by counting and summing
         .assign(pctcov=lambda df: df['covered'] / df['n'] * 100)  # Calculate percentage coverage
         .reset_index()  # Reset index to make 'Predictability_in_OP' a column again
     )
+    print("-----count_ghz------")
+    print(count_ghz.columns)
 
     # for HXZ, we create a special category for alternative holding periods
     df_hxz = pd.read_csv(f"{pathProject}Comparison_to_MetaReplications.csv")
@@ -56,13 +59,13 @@ def process():
     df_hxz['holdalt'] = df_hxz.groupby('ourname').cumcount() + 1    
 
     # Update 'Predictability.in.OP' based on the value of 'holdalt'
-    df_hxz['Predictability_in_OP'] = df_hxz.apply(
-        lambda row: row['Predictability_in_OP'] if row['holdalt'] == 1 else 'z0_altholdper', axis=1
+    df_hxz['Predictability.in.OP'] = df_hxz.apply(
+        lambda row: row['Predictability.in.OP'] if row['holdalt'] == 1 else 'z0_altholdper', axis=1
     )
 
     # Group by 'Predictability.in.OP' and summarize
-    count_hxz = df_hxz.groupby('Predictability_in_OP').agg(
-        n=('Predictability_in_OP', 'size'),
+    count_hxz = df_hxz.groupby('Predictability.in.OP').agg(
+        n=('Predictability.in.OP', 'size'),
         covered=('covered', 'sum')
     ).reset_index()
 
@@ -72,44 +75,47 @@ def process():
     # HLZ has its own csv since it's so different (not replication)
     # coverage then needs to be more judgmental
 
-    df_hlz = pd.reac_csv(f"{pathProject}Comparison_to_HLZ.csv")
+    df_hlz = pd.read_csv(f"{pathProject}Comparison_to_HLZ.csv")
 
     # Create 'covered' column
     df_hlz['covered'] = df_hlz['Coverage'] != 'zz missing'
     # Select relevant columns
-    df_hlz = df_hlz[['Risk factor', 'Predictability_in_OP', 'covered', 'Coverage']] 
+    df_hlz = df_hlz[['Risk factor', 'Predictability.in.OP', 'covered', 'Coverage']] 
     # Group by 'Predictability.in.OP' and summarize
-    count_hlz = df_hlz.groupby('Predictability_in_OP').agg(
-        n=('Predictability_in_OP', 'size'),
+    count_hlz = df_hlz.groupby('Predictability.in.OP').agg(
+        n=('Predictability.in.OP', 'size'),
         covered=('covered', 'sum')
     ).reset_index()
 
     # Calculate the percentage coverage
     count_hlz['pctcov'] = (count_hlz['covered'] / count_hlz['n']) * 100
 
+    print("-----count_us-----")
+    mapping={"Predictability in OP":'Predictability.in.OP' }
+    count_us.rename(columns=mapping, inplace = True)
     #merge
     tab_n=(
         count_us
-        .merge(count_mp[['Predictability_in_OP', 'n']].rename(columns={'n': 'mp'}), on='Predictability_in_OP', how='outer')
-        .merge(count_ghz[['Predictability_in_OP', 'n']].rename(columns={'n': 'ghz'}), on='Predictability_in_OP', how='outer')
-        .merge(count_hlz[['Predictability_in_OP', 'n']].rename(columns={'n': 'hlz'}), on='Predictability_in_OP', how='outer')
-        .merge(count_hxz[['Predictability_in_OP', 'n']].rename(columns={'n': 'hxz'}), on='Predictability_in_OP', how='outer')
+        .merge(count_mp[['Predictability.in.OP', 'n']].rename(columns={'n': 'mp'}), on='Predictability.in.OP', how='outer')
+        .merge(count_ghz[['Predictability.in.OP', 'n']].rename(columns={'n': 'ghz'}), on='Predictability.in.OP', how='outer')
+        .merge(count_hlz[['Predictability.in.OP', 'n']].rename(columns={'n': 'hlz'}), on='Predictability.in.OP', how='outer')
+        .merge(count_hxz[['Predictability.in.OP', 'n']].rename(columns={'n': 'hxz'}), on='Predictability.in.OP', how='outer')
         )
     # Replace NaN values with 0
     tab_n = tab_n.fillna(0)
 
-    # Sort the DataFrame by 'Predictability_in_OP'
-    tab_n = tab_n.sort_values(by='Predictability_in_OP')
+    # Sort the DataFrame by 'Predictability.in.OP'
+    tab_n = tab_n.sort_values(by='Predictability.in.OP')
 
     
     # Assuming count_mp, count_ghz, count_hlz, and count_hxz are already defined
 
     # Perform the full joins
     tab_pctcov = (
-        count_mp[['Predictability_in_OP', 'pctcov']].rename(columns={'pctcov': 'mp'})
-        .merge(count_ghz[['Predictability_in_OP', 'pctcov']].rename(columns={'pctcov': 'ghz'}), on='Predictability_in_OP', how='outer')
-        .merge(count_hlz[['Predictability_in_OP', 'pctcov']].rename(columns={'pctcov': 'hlz'}), on='Predictability_in_OP', how='outer')
-        .merge(count_hxz[['Predictability_in_OP', 'pctcov']].rename(columns={'pctcov': 'hxz'}), on='Predictability_in_OP', how='outer')
+        count_mp[['Predictability.in.OP', 'pctcov']].rename(columns={'pctcov': 'mp'})
+        .merge(count_ghz[['Predictability.in.OP', 'pctcov']].rename(columns={'pctcov': 'ghz'}), on='Predictability.in.OP', how='outer')
+        .merge(count_hlz[['Predictability.in.OP', 'pctcov']].rename(columns={'pctcov': 'hlz'}), on='Predictability.in.OP', how='outer')
+        .merge(count_hxz[['Predictability.in.OP', 'pctcov']].rename(columns={'pctcov': 'hxz'}), on='Predictability.in.OP', how='outer')
     )
 
     # Replace NaN values with 0
@@ -130,21 +136,21 @@ def process():
     all_documentation=read_documentation()
     # Focus on Predictors
 
-    prds=all_documentation.loc[all_documentation['Cat_Signal']=='Predictor','signalname'].tolist()
-    signs=all_documentation.loc[all_documentation['Cat_Signal']=='Predictor', 'Sign'].tolist()
+    prds=all_documentation.loc[all_documentation['Cat.Signal']=='Predictor','signalname'].tolist()
+    signs=all_documentation.loc[all_documentation['Cat.Signal']=='Predictor', 'Sign'].tolist()
 
     # Create table with all Predictors
-    signals=pd.read_csv(f"{pathPredictors}{prds[1]}.csv")[['permno', 'yyyymm']]
+    signals=pd.read_csv(f"{pathPredictors}{prds[0]}.csv")[['permno', 'yyyymm']]
 
     for i in range(len(prds)):
-        if not os.path.exists(f"{pathPredictors}{prds[1]}.csv"):
+        if os.path.exists(f"{pathPredictors}{prds[1]}.csv"):
             tempin = pd.read_csv(f"{pathPredictors}{prds[i]}.csv")
             tempin.iloc[:,2]=signs[i]*tempin.iloc[:, 2]
 
             signals = pd.merge(signals, tempin, how='outer')
 
         else:
-            print(f"{i}, does not exist in Data/Predictors folder")
+            print(f"{prds[i]}, does not exist in Data/Predictors folder")
 
     # Create loop list (there's probably an easier way to get unique pairs)
 
@@ -163,12 +169,12 @@ def process():
     # Fig 1a: Pairwise rank correlation of signals
 
     # Save data to go easier on memory
-    write_fst(signals, os.path.join(pathDataIntermediate, 'temp.fst'))
+    signals.to_csv(os.path.join(pathDataIntermediate, 'temp.csv'))
     del signals
     
     def process_pair(i):
         columns_to_read=loop_list.iloc[i].tolist()
-        tempSignals=read_fst(f"{pathDataIntermediate}temp.fst", columns=columns_to_read)
+        tempSignals=pd.read_csv(f"{pathDataIntermediate}temp.csv")
         tempSignals = tempSignals.dropna().values
 
         #no idea where corSpearman comes from
@@ -192,9 +198,7 @@ def process():
 
     plt.savefig(f"{pathResults}fig1aStock_pairwisecorrelations.pdf", 
                 format='pdf', 
-                bbox_inches='tight', 
-                width=10, 
-                height=8)
+                bbox_inches='tight')
     
 
     global allRhos 
@@ -212,8 +216,8 @@ def process():
         # Extract column names for the current pair
         columns_to_read = loopList.iloc[i].tolist()
         
-        # Read specific columns from the FST file
-        tempSignals = read_fst(os.path.join(pathDataIntermediate, 'temp.fst'), columns=columns_to_read)
+        # Read specific columns from the CSV file
+        tempSignals = pd.read_csv(os.path.join(pathDataIntermediate, 'temp.csv'))
         
         # Filter out rows with missing values
         tempSignals = tempSignals.dropna().values
@@ -245,7 +249,7 @@ def process():
         plt.ylabel('Count', fontsize=14)
         sns.set_theme(style="whitegrid")
 
-        plt.savefig(f'{pathResults}fig1SignalCorrelationWith_{vv}.pdf', format='pdf', bbox_inches='tight', width=10, height=8)
+        plt.savefig(f'{pathResults}fig1SignalCorrelationWith_{vv}.pdf', format='pdf', bbox_inches='tight')
         plt.close()
         
         allRhos = pd.concat([allRhos, pd.DataFrame({
@@ -253,34 +257,35 @@ def process():
             'series': vv
             })], ignore_index=True)
     # Plot all correlations on the same axis with faceting by 'series'
-    plt.figure(figsize=(10, 8))
-    g = sns.FacetGrid(allRhos, col="series", col_wrap=3, sharey=False, height=4)
-    g.map(sns.histplot, "rho", bins=25)
-    g.set(xlim=(-1, 1))
+    if len(allRhos.index)!=0:
+        plt.figure(figsize=(10, 8))
+        g = sns.FacetGrid(allRhos, col="series", col_wrap=3, sharey=False, height=4)
+        g.map(sns.histplot, "rho", bins=25)
+        g.set(xlim=(-1, 1))
 
-    # Add labels
-    g.set_axis_labels("Correlation coefficient", "Count")
+        # Add labels
+        g.set_axis_labels("Correlation coefficient", "Count")
 
-    # Apply a minimal theme
-    sns.set_theme(style="whitegrid")
+        # Apply a minimal theme
+        sns.set_theme(style="whitegrid")
 
-    # Save the plot as a PDF file
-    plt.savefig(os.path.join(pathResults, 'fig1Stock_jointly.pdf'), format='pdf', bbox_inches='tight')
+        # Save the plot as a PDF file
+        plt.savefig(os.path.join(pathResults, 'fig1Stock_jointly.pdf'), format='pdf', bbox_inches='tight')
 
-    # Optionally, close the plot if you're done with it
-    plt.close()
+        # Optionally, close the plot if you're done with it
+        plt.close()
 
-    # Save the DataFrame as a binary file
-    with open(os.path.join(pathResults, 'rhoStockLevel.pkl'), 'wb') as file:
-        pickle.dump(allRhos, file)
+        # Save the DataFrame as a binary file
+        with open(os.path.join(pathResults, 'rhoStockLevel.pkl'), 'wb') as file:
+            pickle.dump(allRhos, file)
 
+
+            
 
         
+        
 
-    
-    
-
-    
+        
 
 
 
