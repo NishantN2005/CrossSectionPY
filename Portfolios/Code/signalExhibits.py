@@ -5,13 +5,36 @@ import os
 from globals import pathProject, pathResults,pathPredictors, pathDataIntermediate
 from settingsAndTools import check_signals
 import itertools
-import multiprocessing
+from multiprocessing import Pool
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pickle
+
+def corSpearman(x, y):
+        return np.corrcoef(x, y)[0, 1]
+
+def calculate_correlation(i, loopList, pathDataIntermediate):
+    # Reading data using fst
+    cols_to_use = columns_to_read = loopList.iloc[i].tolist()
+    print(i, cols_to_use)
+    file_path = os.path.join(pathDataIntermediate, 'temp.csv')
+    tempSignals = pd.read_csv(file_path, usecols=cols_to_use)
+
+    # Filter complete cases (remove rows with any NaN values)
+    tempSignals = tempSignals.dropna().values  # Converts to numpy matrix
+
+    # Spearman correlation
+    correlation = corSpearman(tempSignals[:, 0], tempSignals[:, 1])
+
+    return correlation
+
+def parallel_correlation(loop_list):
+    # Parallel processing using multiprocessing.Pool
+    with Pool() as pool:
+        results = pool.starmap(calculate_correlation, [(i, loop_list, pathDataIntermediate) for i in range(len(loop_list))])
+    
+    return results
 # Figure N: Dataset Coverage -------------------
-
-
 def process():
     # first count for each paper
     count_us = read_documentation()
@@ -139,11 +162,18 @@ def process():
     prds=all_documentation.loc[all_documentation['Cat.Signal']=='Predictor','signalname'].tolist()
     signs=all_documentation.loc[all_documentation['Cat.Signal']=='Predictor', 'Sign'].tolist()
 
+    print("---------pathPredictors----------")
+    print(pathPredictors)
+
     # Create table with all Predictors
     signals=pd.read_csv(f"{pathPredictors}{prds[0]}.csv")[['permno', 'yyyymm']]
 
+    print('---------------signals----------------')
+    print(signals.columns)
+    print(signals.head())
     for i in range(len(prds)):
-        if os.path.exists(f"{pathPredictors}{prds[1]}.csv"):
+        print(i, prds[i])
+        if os.path.exists(f"{pathPredictors}{prds[i]}.csv"):
             tempin = pd.read_csv(f"{pathPredictors}{prds[i]}.csv")
             tempin.iloc[:,2]=signs[i]*tempin.iloc[:, 2]
 
@@ -162,8 +192,8 @@ def process():
     temp1 = temp1[temp1['Var1'] > temp1['Var2']]
 
     loop_list = pd.DataFrame({
-    'Var1': [prds[i - 1] for i in temp1['Var1']],  # Subtracting 1 for zero-based indexing in Python
-    'Var2': [prds[i - 1] for i in temp1['Var2']]   # Subtracting 1 for zero-based indexing in Python
+    'Var1': [prds[i - 1] for i in temp1['Var1']], 
+    'Var2': [prds[i - 1] for i in temp1['Var2']]   
     })
 
     # Fig 1a: Pairwise rank correlation of signals
@@ -172,17 +202,10 @@ def process():
     signals.to_csv(os.path.join(pathDataIntermediate, 'temp.csv'))
     del signals
     
-    def process_pair(i):
-        columns_to_read=loop_list.iloc[i].tolist()
-        tempSignals=pd.read_csv(f"{pathDataIntermediate}temp.csv")
-        tempSignals = tempSignals.dropna().values
 
-        #no idea where corSpearman comes from
-        return corSpearman(tempSignals[:,0],tempSignals[:,1],consistant=False)
     
-    cores = multiprocessing.cpu_count()
-    with multiprocessing.Pool(cores - 1) as pool:
-        temp = pool.map(process_pair, range(len(loop_list)))
+    
+    temp = parallel_correlation(loop_list)
 
     # Convert temp to a pandas DataFrame
     df = pd.DataFrame({'rho': temp})
@@ -208,22 +231,6 @@ def process():
     })
 
     vars=['Size', 'BM', 'Mom12m','GP','AssetGrowth']
-
-    def corSpearman(x, y):
-        return np.corrcoef(x, y)[0, 1]
-
-    def process_pair(i):
-        # Extract column names for the current pair
-        columns_to_read = loopList.iloc[i].tolist()
-        
-        # Read specific columns from the CSV file
-        tempSignals = pd.read_csv(os.path.join(pathDataIntermediate, 'temp.csv'))
-        
-        # Filter out rows with missing values
-        tempSignals = tempSignals.dropna().values
-        
-        # Compute Spearman's rank correlation
-        return corSpearman(tempSignals[:, 0], tempSignals[:, 1])
     
     for vv in vars:
         print(vv)

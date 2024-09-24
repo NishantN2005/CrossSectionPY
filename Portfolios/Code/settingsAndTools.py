@@ -49,7 +49,8 @@ def read_documentation():
         return x
     
     #load signal header
-    all_documentation = pd.read_csv(f"{pathProject}SignalDoc.csv")
+    #all_documentation = pd.read_csv(f"{pathProject}SignalDoc.csv")
+    all_documentation = pd.read_csv("/Users/nishant/CrossSectionPY/SignalDoc.csv")
     all_documentation = all_documentation.rename(columns={'Acronym': 'signalname'})
     all_documentation = all_documentation.assign(Cat_Data=lambda df: pd.Categorical(
             df['Cat.Data'], 
@@ -93,8 +94,6 @@ def check_signals(docs = read_documentation(), path_proj = pathProject):
         print("-----p-----")
         print(type(p))
         print(p)
-        print(type(fls_placebos))
-        print(fls_placebos)
         if p+'.csv' not in fls_placebos:
             placeboNotInData.append(p)
     

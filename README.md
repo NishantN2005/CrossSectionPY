@@ -8,3 +8,12 @@ Make sure you know which are Predictor Portfolios and which ones are Placebo Por
 
 Make sure Comparison_to_Meta_Replications.csv is in root
 Make sure Comparison_to_HLZ is in root
+
+If you want all the placebos/predictors the zip files are here:
+https://drive.google.com/drive/folders/1rCXYO4R9KIPytX7cFwCL8UTx2dunm1RC
+
+download the placebos/predicots zip files and unzip them into corresponding Signal/Data/placebos or Signal/Data/predictors folders
+
+NOTE: line 53 in settingAndTools, replace that string literal your path for SignalDoc.csv (should be in root)
+
+To run simply run the main.py file in Portfolios/Code from the project root.
